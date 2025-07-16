@@ -2,47 +2,58 @@ import { AuthClient } from "@dfinity/auth-client";
 
 async function run() {
   console.log('Callback page loaded');
-  const authClient = await AuthClient.create();
-  console.log('AuthClient created');
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const isLogout = urlParams.get('logout') === 'true';
-  console.log('URL params:', Object.fromEntries(urlParams.entries()));
   
-  if (isLogout) {
-    console.log('Logout requested, clearing II session...');
-    await authClient.logout();
-    console.log('II session cleared, redirecting to app');
-    window.location.href = 'icpapp://logout';
-    return;
-  }
+  try {
+    const authClient = await AuthClient.create();
+    console.log('AuthClient created');
 
-  const isAuthenticated = await authClient.isAuthenticated();
-  console.log('Is authenticated:', isAuthenticated);
-  
-  if (isAuthenticated) {
-    const identity = authClient.getIdentity();
-    const principal = identity.getPrincipal().toText();
-    console.log('User already authenticated, redirecting to app with principal:', principal);
-    window.location.href = `icpapp://login?principal=${principal}`;
-    return;
-  }
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLogout = urlParams.get('logout') === 'true';
+    console.log('URL params:', Object.fromEntries(urlParams.entries()));
+    
+    if (isLogout) {
+      console.log('Logout requested, clearing II session...');
+      await authClient.logout();
+      console.log('II session cleared, redirecting to app');
+      window.location.href = 'icpapp://logout';
+      return;
+    }
 
-  console.log('Starting Internet Identity login flow...');
-  
-  await authClient.login({
-    identityProvider: "https://identity.ic0.app/",
-    onSuccess: async () => {
+    const isAuthenticated = await authClient.isAuthenticated();
+    console.log('Is authenticated:', isAuthenticated);
+    
+    if (isAuthenticated) {
       const identity = authClient.getIdentity();
       const principal = identity.getPrincipal().toText();
-      console.log('Login successful, redirecting to app with principal:', principal);
+      console.log('User already authenticated, redirecting to app with principal:', principal);
       window.location.href = `icpapp://login?principal=${principal}`;
-    },
-    onError: (err) => {
-      document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Login failed: ${err}</h2>`;
-      console.error("II Login error:", err);
+      return;
     }
-  });
+
+    console.log('Starting Internet Identity login flow...');
+    
+    await authClient.login({
+      identityProvider: "https://identity.ic0.app/",
+      onSuccess: async () => {
+        try {
+          const identity = authClient.getIdentity();
+          const principal = identity.getPrincipal().toText();
+          console.log('Login successful, redirecting to app with principal:', principal);
+          window.location.href = `icpapp://login?principal=${principal}`;
+        } catch (error) {
+          console.error('Error in onSuccess:', error);
+          document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Error getting principal: ${error}</h2>`;
+        }
+      },
+      onError: (err) => {
+        document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Login failed: ${err}</h2>`;
+        console.error("II Login error:", err);
+      }
+    });
+  } catch (error) {
+    console.error('Error in callback page:', error);
+    document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Callback error: ${error}</h2>`;
+  }
 }
 
 run(); 
