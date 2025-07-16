@@ -19,26 +19,12 @@ async function run() {
       return;
     }
 
-    // Check if already authenticated first
-    const isAuthenticated = await authClient.isAuthenticated();
-    console.log('Is authenticated:', isAuthenticated);
-    
-    if (isAuthenticated) {
-      try {
-        const identity = authClient.getIdentity();
-        const principal = identity.getPrincipal().toText();
-        console.log('User already authenticated, redirecting to app with principal:', principal);
-        window.location.href = `icpapp://login?principal=${principal}`;
-        return;
-      } catch (error) {
-        console.error('Error getting principal from existing session:', error);
-        // Continue to login flow
-      }
-    }
+    // Always force logout before starting a new login
+    console.log('Forcing II logout before login...');
+    await authClient.logout();
+    console.log('II session cleared, starting fresh login flow...');
 
     // Start fresh login flow
-    console.log('Starting Internet Identity login flow...');
-    
     authClient.login({
       identityProvider: "https://identity.ic0.app/",
       onSuccess: async () => {
@@ -47,29 +33,23 @@ async function run() {
           const identity = authClient.getIdentity();
           const principal = identity.getPrincipal().toText();
           console.log('Login successful, redirecting to app with principal:', principal);
-          
-          // Force redirect to app
           setTimeout(() => {
             console.log('Executing redirect to app...');
             window.location.href = `icpapp://login?principal=${principal}`;
           }, 100);
-          
         } catch (error) {
           console.error('Error in onSuccess:', error);
-          // Fallback: redirect with error
           window.location.href = `icpapp://login?error=${encodeURIComponent(error.message)}`;
         }
       },
       onError: (err) => {
         console.error("II Login error:", err);
-        // Redirect with error
         window.location.href = `icpapp://login?error=${encodeURIComponent(err.message)}`;
       }
     });
     
   } catch (error) {
     console.error('Error in callback page:', error);
-    // Fallback redirect
     window.location.href = `icpapp://login?error=${encodeURIComponent(error.message)}`;
   }
 }
