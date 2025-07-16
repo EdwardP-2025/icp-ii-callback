@@ -19,12 +19,30 @@ async function run() {
       return;
     }
 
-    // Always start login flow for fresh authentication
+    // Check if already authenticated first
+    const isAuthenticated = await authClient.isAuthenticated();
+    console.log('Is authenticated:', isAuthenticated);
+    
+    if (isAuthenticated) {
+      try {
+        const identity = authClient.getIdentity();
+        const principal = identity.getPrincipal().toText();
+        console.log('User already authenticated, redirecting to app with principal:', principal);
+        window.location.href = `icpapp://login?principal=${principal}`;
+        return;
+      } catch (error) {
+        console.error('Error getting principal from existing session:', error);
+        // Continue to login flow
+      }
+    }
+
+    // Start fresh login flow
     console.log('Starting Internet Identity login flow...');
     
     authClient.login({
       identityProvider: "https://identity.ic0.app/",
       onSuccess: async () => {
+        console.log('II login onSuccess called');
         try {
           const identity = authClient.getIdentity();
           const principal = identity.getPrincipal().toText();
@@ -32,6 +50,7 @@ async function run() {
           
           // Force redirect to app
           setTimeout(() => {
+            console.log('Executing redirect to app...');
             window.location.href = `icpapp://login?principal=${principal}`;
           }, 100);
           
