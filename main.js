@@ -19,40 +19,39 @@ async function run() {
       return;
     }
 
-    const isAuthenticated = await authClient.isAuthenticated();
-    console.log('Is authenticated:', isAuthenticated);
-    
-    if (isAuthenticated) {
-      const identity = authClient.getIdentity();
-      const principal = identity.getPrincipal().toText();
-      console.log('User already authenticated, redirecting to app with principal:', principal);
-      window.location.href = `icpapp://login?principal=${principal}`;
-      return;
-    }
-
+    // Always start login flow for fresh authentication
     console.log('Starting Internet Identity login flow...');
     
-    await authClient.login({
+    authClient.login({
       identityProvider: "https://identity.ic0.app/",
       onSuccess: async () => {
         try {
           const identity = authClient.getIdentity();
           const principal = identity.getPrincipal().toText();
           console.log('Login successful, redirecting to app with principal:', principal);
-          window.location.href = `icpapp://login?principal=${principal}`;
+          
+          // Force redirect to app
+          setTimeout(() => {
+            window.location.href = `icpapp://login?principal=${principal}`;
+          }, 100);
+          
         } catch (error) {
           console.error('Error in onSuccess:', error);
-          document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Error getting principal: ${error}</h2>`;
+          // Fallback: redirect with error
+          window.location.href = `icpapp://login?error=${encodeURIComponent(error.message)}`;
         }
       },
       onError: (err) => {
-        document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Login failed: ${err}</h2>`;
         console.error("II Login error:", err);
+        // Redirect with error
+        window.location.href = `icpapp://login?error=${encodeURIComponent(err.message)}`;
       }
     });
+    
   } catch (error) {
     console.error('Error in callback page:', error);
-    document.body.innerHTML = `<h2 style="color:red;text-align:center;margin-top:40vh;">Callback error: ${error}</h2>`;
+    // Fallback redirect
+    window.location.href = `icpapp://login?error=${encodeURIComponent(error.message)}`;
   }
 }
 
