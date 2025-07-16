@@ -1,10 +1,13 @@
 import { AuthClient } from "@dfinity/auth-client";
 
 async function run() {
+  console.log('Callback page loaded');
   const authClient = await AuthClient.create();
+  console.log('AuthClient created');
 
   const urlParams = new URLSearchParams(window.location.search);
   const isLogout = urlParams.get('logout') === 'true';
+  console.log('URL params:', Object.fromEntries(urlParams.entries()));
   
   if (isLogout) {
     console.log('Logout requested, clearing II session...');
@@ -14,7 +17,10 @@ async function run() {
     return;
   }
 
-  if (await authClient.isAuthenticated()) {
+  const isAuthenticated = await authClient.isAuthenticated();
+  console.log('Is authenticated:', isAuthenticated);
+  
+  if (isAuthenticated) {
     const identity = authClient.getIdentity();
     const principal = identity.getPrincipal().toText();
     console.log('User already authenticated, redirecting to app with principal:', principal);
